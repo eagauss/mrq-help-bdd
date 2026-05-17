@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: "Optional Playwright --grep filter (e.g. @smoke)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright BDD (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        env:
+          GREP: ${{ inputs.grep }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ -n "$GREP" ]; then
+            npm test -- --grep "$GREP"
+          elif [ "$EVENT" = "pull_request" ]; then
+            npm test -- --grep "@smoke" --grep-invert "@bug"
+          else
+            npm test -- --grep-invert "@bug"
+          fi
+
+      - name: Publish test summary
+        if: always()
+        uses: ctrf-io/github-test-reporter@v1
+        with:
+          report-path: playwright-report/ctrf-report.json
+          community-report: true
+          community-report-name: cobra-report
+          flaky-report: true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 14

@@ -1,0 +1,8 @@
+{
+  "placeholders": {
+    "search": "Search for articles"
+  },
+  "messages": {
+    "noResults": "We couldn't find any articles"
+  }
+}
