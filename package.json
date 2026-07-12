@@ -16,6 +16,6 @@
     "@types/node": "^25.7.0",
     "playwright-bdd": "^8.2.0",
     "playwright-ctrf-json-reporter": "^0.0.29",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
